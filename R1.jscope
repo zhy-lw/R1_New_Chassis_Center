@@ -1,0 +1,42 @@
+<?xml version="1.0" encoding="UTF-8" standalone="yes" ?>
+<JScopeProject>
+    <FileVersion major="1" minor="1" />
+    <Project>
+        <Configuration>
+            <JLink>
+                <Options Connection="1" IsRTTSession="0" IsRTTWithTimeStamp="0" IsRTTPlus="0" SamplingPeriod="100" SerialNo="0" JTAG_IRPre="0" JTAG_DRPre="0" IP="" TargetDevice="STM32F407VE" Nickname="" TargetInterface="SWD" InterfaceSpeed="4000" />
+            </JLink>
+            <ElfFile Name="D:\Keil_Project_Trae_CN\R1_Chassis_Four\MDK-ARM\chassis\chassis.axf" />
+            <Scope>
+                <Options TimeResolutionUs="1000000" />
+            </Scope>
+            <Trigger>
+                <Options Level="0" Symbol="Ex" On="0" Auto="0" Rise="0" Fall="0" />
+            </Trigger>
+        </Configuration>
+        <Windows>
+            <Graph Show="1" />
+            <Watch Show="1" />
+        </Windows>
+        <SelectedSymbols>
+            <Symbol>
+                <Options Name="Ex" Address="0x200005D0" Type="float" TypeID="1" Size="4" GraphColorRed="255" GraphColorGreen="0" GraphColorBlue="0" YMinSampled="-3.5" YMaxSampled="0" YAvgSampled="-0.0659834" Offset="4" ShowInGraph="1" YOffset="0" IsAutoConfig="0" YResolution="1" MaxValue="-2147483648" File="D:\Keil_Project_Trae_CN\R1_Chassis_Four\MDK-ARM/../Compents\Task_Init.c" DrawStyle="0" NameWithParents="Remote_Control.Ex" />
+            </Symbol>
+            <Symbol>
+                <Options Name="Ey" Address="0x200005D4" Type="float" TypeID="1" Size="4" GraphColorRed="0" GraphColorGreen="0" GraphColorBlue="255" YMinSampled="0" YMaxSampled="0" YAvgSampled="0" Offset="8" ShowInGraph="1" YOffset="0" IsAutoConfig="0" YResolution="1" MaxValue="-2147483648" File="D:\Keil_Project_Trae_CN\R1_Chassis_Four\MDK-ARM/../Compents\Task_Init.c" DrawStyle="0" NameWithParents="Remote_Control.Ey" />
+            </Symbol>
+            <Symbol>
+                <Options Name="Eomega" Address="0x200005D8" Type="float" TypeID="1" Size="4" GraphColorRed="0" GraphColorGreen="255" GraphColorBlue="0" YMinSampled="0" YMaxSampled="0" YAvgSampled="0" Offset="12" ShowInGraph="1" YOffset="0" IsAutoConfig="0" YResolution="1" MaxValue="-2147483648" File="D:\Keil_Project_Trae_CN\R1_Chassis_Four\MDK-ARM/../Compents\Task_Init.c" DrawStyle="0" NameWithParents="Remote_Control.Eomega" />
+            </Symbol>
+            <Symbol>
+                <Options Name="Ex" Address="0x200005F8" Type="float" TypeID="1" Size="4" GraphColorRed="0" GraphColorGreen="255" GraphColorBlue="255" YMinSampled="-3.4819" YMaxSampled="0" YAvgSampled="-0.0671888" Offset="16" ShowInGraph="1" YOffset="0" IsAutoConfig="0" YResolution="1" MaxValue="-2147483648" File="D:\Keil_Project_Trae_CN\R1_Chassis_Four\MDK-ARM/../Compents\Task_Init.c" DrawStyle="0" NameWithParents="Remote_Control_One.Ex" />
+            </Symbol>
+            <Symbol>
+                <Options Name="Ey" Address="0x200005FC" Type="float" TypeID="1" Size="4" GraphColorRed="255" GraphColorGreen="255" GraphColorBlue="0" YMinSampled="0" YMaxSampled="0" YAvgSampled="0" Offset="20" ShowInGraph="1" YOffset="0" IsAutoConfig="0" YResolution="1" MaxValue="-2147483648" File="D:\Keil_Project_Trae_CN\R1_Chassis_Four\MDK-ARM/../Compents\Task_Init.c" DrawStyle="0" NameWithParents="Remote_Control_One.Ey" />
+            </Symbol>
+            <Symbol>
+                <Options Name="Eomega" Address="0x20000600" Type="float" TypeID="1" Size="4" GraphColorRed="255" GraphColorGreen="0" GraphColorBlue="255" YMinSampled="0" YMaxSampled="0" YAvgSampled="0" Offset="24" ShowInGraph="1" YOffset="0" IsAutoConfig="0" YResolution="1" MaxValue="-2147483648" File="D:\Keil_Project_Trae_CN\R1_Chassis_Four\MDK-ARM/../Compents\Task_Init.c" DrawStyle="0" NameWithParents="Remote_Control_One.Eomega" />
+            </Symbol>
+        </SelectedSymbols>
+    </Project>
+</JScopeProject>
