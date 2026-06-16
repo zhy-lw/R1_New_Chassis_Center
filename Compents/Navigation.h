@@ -20,10 +20,8 @@ typedef struct {
     
     // ====== 控制参数 ======
     float max_velocity;       // 最大速度（米/秒）
-		float accel_distance;    	// 加速距离（米）：从0加速到vmax所需距离
-		float update_dt;         // 控制器更新周期（秒），用于每周期加速度限速
-    float decel_distance;     // 减速距离（米），开始减速时距离目标的距离
-	
+    float k_lateral;          // 横向误差增益
+    
     // ====== 容差参数 ======
     float position_tolerance;  // 位置容差（米）
     
@@ -34,13 +32,8 @@ typedef struct {
     // ====== 运行状态 ======
     bool is_running;          // 是否正在运行
 		bool has_arrived;         // 是否已经到达并计数
-		
-		// ====== 梯形规划内部状态 ======
-    float total_distance;     // SetTarget时记录的总距离（米）
-    float last_speed;         // 上一次的规划速度（米/秒），用于每周期加速度限速
 } PurePursuitController;
 
-void PurePursuit_SetSpeedParams(PurePursuitController *controller, float accel_distance, float decel_distance);
 void PurePursuit_Init(PurePursuitController *controller);
 void PurePursuit_SetTarget(PurePursuitController *controller, float target_x, float target_y, float target_yaw);
 void PurePursuit_Update(PurePursuitController* controller);

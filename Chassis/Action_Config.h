@@ -9,7 +9,7 @@
 #include "semphr.h"
 
 #define ACTION_MAX_PARALLEL   20    // 最大并行任务数
-#define ACTION_STACK_SIZE     128  // 单个任务栈大小
+#define ACTION_STACK_SIZE     350  // 单个任务栈大小
 #define ACTION_PRIORITY       4    // 动作执行优先级
 
 typedef void (*ActionFunc_t)(void *param);

@@ -129,17 +129,17 @@ void Task_Init(void)
     }
 		
     Vector2D barycenter = {0, 0};
-    ChassisInit(&chassis, wheelArray, 4, barycenter, 25.2f, 1.25f, 0.0005f, 2, 500, 4);
+    ChassisInit(&chassis, wheelArray, 4, barycenter, 25.2f, 1.25f, 0.0005f, 2, 400, 4);
 		
 		vTaskDelay(500);
 		Motor_init();
 
-		xTaskCreate(Arm_Task,"Arm_Task", 500, NULL, 4, &Arm_Task_Handle);
-		xTaskCreate(Remote_Analysis_Task, "Remote_Analysis_Task", 150, NULL, 4, &Remote_Analysis_Handle);
-		xTaskCreate(Uart_Tx, "Uart_Tx", 300, NULL, 4, &Uart_Tx_Handle);
+		xTaskCreate(Arm_Task,"Arm_Task", 400, NULL, 5, &Arm_Task_Handle);
+		xTaskCreate(Remote_Analysis_Task, "Remote_Analysis_Task", 180, NULL, 4, &Remote_Analysis_Handle);
+		xTaskCreate(Uart_Tx, "Uart_Tx", 256, NULL, 4, &Uart_Tx_Handle);
 		xTaskCreate(Auto_Navigatoin,"Auto_Navigatoin",256,NULL,4,&Auto_Navigatoin_Handle);
 		xTaskCreate(Action, "Action", 256, NULL, 4 , &Action_Handle);
-		xTaskCreate(Radar_Analysis_Task,"Radar_Analysis_Task",150,NULL,4,&Radar_Handle);
+		xTaskCreate(Radar_Analysis_Task,"Radar_Analysis_Task",180,NULL,4,&Radar_Handle);
 }
 
 void Motor_init()
@@ -175,14 +175,14 @@ void Motor_init()
 	Joint.RM3508_motor[0].vel_pid.limit = 10000.0f;
 	Joint.RM3508_motor[0].vel_pid.output_limit = 16384.0f;//升降
 
-	Joint.RM3508_motor[1].pos_pid.Kp = 0.06f;
+	Joint.RM3508_motor[1].pos_pid.Kp = 0.05f;
 	Joint.RM3508_motor[1].pos_pid.Ki = 0.0f;
 	Joint.RM3508_motor[1].pos_pid.Kd = 0.0f;
 	Joint.RM3508_motor[1].pos_pid.limit = 10000.0f;
 	Joint.RM3508_motor[1].pos_pid.output_limit = 9000.0f;
 	
-	Joint.RM3508_motor[1].vel_pid.Kp = 1.0f;
-	Joint.RM3508_motor[1].vel_pid.Ki = 0.05f;
+	Joint.RM3508_motor[1].vel_pid.Kp = 4.0f;
+	Joint.RM3508_motor[1].vel_pid.Ki = 0.1f;
 	Joint.RM3508_motor[1].vel_pid.Kd = 0.0f;
 	Joint.RM3508_motor[1].vel_pid.limit = 10000.0f;
 	Joint.RM3508_motor[1].vel_pid.output_limit = 16384.0f;//伸缩
@@ -250,9 +250,9 @@ void Arm_Task(void *param)
 		RobStrideMotionControl(&Joint.Rs_motor[1], 0x04, 0, Joint.pos_offset[1] + (over_turn_pos * 2.0f), 0, Kp_t, Kd_t);
 		
 		//伸缩
-		flexible_pos = Length_To_Scale(exp_flexible_len);
+		flexible_pos = - Length_To_Scale(exp_flexible_len);
 		PID_Control2(Joint.RM3508_motor[1].actual_pos,flexible_pos,&Joint.RM3508_motor[1].pos_pid);
-		PID_Control2(Joint.RM3508_motor[1].motor.Speed,Joint.RM3508_motor[1].pos_pid.pid_out,&Joint.RM3508_motor[1].vel_pid);
+		PID_Control2(Joint.RM3508_motor[1].motor.Speed, Joint.RM3508_motor[1].pos_pid.pid_out, &Joint.RM3508_motor[1].vel_pid);
     can1_3508_Tx_Data[2] = Joint.RM3508_motor[1].vel_pid.pid_out * 0;
 		
 		MotorSend(&hcan1,0x200,can1_3508_Tx_Data);
@@ -503,6 +503,7 @@ void Uart_Tx(void *pvParameters)
 		Arm_Remote_Data.key = recv_pack.Key;
 		Arm_Remote_Data.Action_Sign = Action_Sign;
 		Arm_Remote_Data.mode = Mode;
+		Arm_Remote_Data.crc = crc_ccitt(0, (uint8_t *)&Arm_Remote_Data, sizeof(Arm_Remote_Data)-2);
 		HAL_UART_Transmit_DMA(&huart4, (uint8_t *)&Arm_Remote_Data, sizeof(Arm_TransRemote_t));
 		
 		vTaskDelayUntil(&last_wake_time, pdMS_TO_TICKS(30));

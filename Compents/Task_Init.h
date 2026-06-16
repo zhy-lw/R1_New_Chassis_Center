@@ -104,6 +104,7 @@ typedef struct {
 	ChassisMode mode;
 	uint8_t Action_Sign;
 	uint8_t tail;
+	uint16_t crc;
 }Arm_TransRemote_t;
 #pragma pack()
 
