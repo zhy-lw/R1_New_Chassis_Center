@@ -247,142 +247,321 @@ extern MerLin_Pack_t MerLin_Pack;
 // [8]   6.145 5.250 -1.5
 // [11]  7.352 5.247 -1.5
 
+uint8_t index_no_fetch = 0;//那个没拿索引
+
 void Auto_KFS_Action(void *param)
 {
 	TickType_t last_wake_time = xTaskGetTickCount();
-	
+
 	run_count = 0;
 	static uint32_t last_count = 0;
-		
-	while(1)
+
+	while (1)
 	{
-		if(run_count == 0)
+		if (run_count == 0)
 		{
-			if(last_count != 1)
+			if (last_count != 1)
 			{
-				PurePursuit_SetTarget(&Pure_Handle, 1.5f, 3.68f, 1.55f);//第一个点
+				PurePursuit_SetTarget(&Pure_Handle, 1.5f, 3.68f, 1.55f); // 第一个点
 				exp_flexible_len = 350;
-				One_Four_Sign = 1;//左张开舵机转，延时2000闭合左爪
-				Action_Sign = 4;//前爪张开 ,后05，-1.6
+				One_Four_Sign = 1; // 左张开舵机转，延时2000闭合左爪
+				Action_Sign = 4;   // 前爪张开 ,后05，-1.6
 				last_count = 1;
 			}
 		}
-		
-		if(MerLin_State_flag == GetReturnValue())
+
+		if (MerLin_State_flag == GetReturnValue())
 		{
-			if(MerLin_State_flag == 1)
+			if (MerLin_State_flag == 1) // 0,1,2有两个
 			{
-				
+				if (run_count == 1)
+				{
+					if (MerLin_Pack.MerLin[0] == 0)
+					{
+						// 1 和 2 为1，最大是 2,先去取第三个块
+						if (last_count != 2)
+						{
+							Pure_Handle.target_theta = 0.0f;
+							vTaskDelay(700);
+							PurePursuit_SetTarget(&Pure_Handle, 2.759f, 4.123f, 0.0f); // 去取第三个格的块儿,取第二个格的块儿是2.767 2.923
+							exp_flexible_len = 100;
+							exp_height_3508 = 250; // 高度400
+							over_turn_pos = 1.5;   // 升起并翻转05
+							last_count = 2;
+
+							index_no_fetch = 1;
+						}
+					}
+					else if (MerLin_Pack.MerLin[1] == 0)
+					{
+						// 0 和 2 为1，最大是 2先去取2先去取第三个块
+						if (last_count != 2)
+						{
+							Pure_Handle.target_theta = 0.0f;
+							vTaskDelay(700);
+							PurePursuit_SetTarget(&Pure_Handle, 2.759f, 4.123f, 0.0f); // 去取第三个格的块儿，取第一个格的块儿是2.765 1.722
+							exp_flexible_len = 100;
+							exp_height_3508 = 250; // 高度400
+							over_turn_pos = 1.5;   // 升起并翻转05
+							last_count = 2;
+
+							index_no_fetch = 2;
+						}
+					}
+					else if (MerLin_Pack.MerLin[2] == 0)
+					{
+						// 0 和 1 为1，最大是 1先去取1先去取第二个块
+						if (last_count != 2)
+						{
+							Pure_Handle.target_theta = 0.0f;
+							vTaskDelay(700);
+							PurePursuit_SetTarget(&Pure_Handle, 2.767f, 2.923f, 0.0f); // 去取第二个格的块儿，取第一个格的块儿是2.765 1.722
+							exp_flexible_len = 100;
+							exp_height_3508 = 50; // 高度200
+							over_turn_pos = 1.5;  // 升起并翻转05
+							last_count = 2;
+
+							index_no_fetch = 3;
+						}
+					}
+				}
+
+				if (run_count == 2)
+				{
+					if (index_no_fetch == 1)
+					{
+						if (last_count != 3)
+						{
+							GPIO_Pin_State_AirPump = 1;
+							GPIO_Pin_State_Valve = 1;
+							exp_flexible_len = 400;
+							vTaskDelay(300);
+							exp_height_3508 = 500;
+							vTaskDelay(300);
+							exp_flexible_len = 100;
+							PurePursuit_SetTarget(&Pure_Handle, 2.767f, 2.923f, 0.0f); // 第二个块
+							cloud_pos_target = -1.427;
+							vTaskDelay(700);
+							exp_height_3508 = 300;
+							vTaskDelay(700);
+							exp_flexible_len = 40;
+							vTaskDelay(200);
+							exp_height_3508 = 170;
+							vTaskDelay(400);
+							cloud_pos_target = -1.6;
+							vTaskDelay(200);
+							GPIO_Pin_State_Valve = 0;
+							Two_Three_Sign = 1;
+							vTaskDelay(200);
+							exp_height_3508 = 500;
+							vTaskDelay(500);
+							cloud_pos_target = 0;
+							last_count = 3;
+						}
+					}
+
+					if (index_no_fetch == 2)
+					{
+						if (last_count != 3)
+						{
+							GPIO_Pin_State_AirPump = 1;
+							GPIO_Pin_State_Valve = 1;
+							exp_flexible_len = 400;
+							vTaskDelay(300);
+							exp_height_3508 = 500;
+							vTaskDelay(300);
+							exp_flexible_len = 100;
+							PurePursuit_SetTarget(&Pure_Handle, 2.765f, 1.722f, 0.0f); // 取第一个块
+							cloud_pos_target = -1.427;
+							vTaskDelay(700);
+							exp_height_3508 = 300;
+							vTaskDelay(700);
+							exp_flexible_len = 40;
+							vTaskDelay(200);
+							exp_height_3508 = 170;
+							vTaskDelay(400);
+							cloud_pos_target = -1.6;
+							vTaskDelay(200);
+							GPIO_Pin_State_Valve = 0;
+							Two_Three_Sign = 1;
+							vTaskDelay(200);
+							exp_height_3508 = 500;
+							vTaskDelay(500);
+							cloud_pos_target = 0;
+							last_count = 3;
+						}
+					}
+
+					if (index_no_fetch == 3)
+					{
+						if (last_count != 3)
+						{
+							GPIO_Pin_State_AirPump = 1;
+							GPIO_Pin_State_Valve = 1;
+							exp_flexible_len = 400;
+							vTaskDelay(300);
+							exp_height_3508 = 500;
+							vTaskDelay(300);
+							exp_flexible_len = 100;
+							PurePursuit_SetTarget(&Pure_Handle, 2.765f, 1.722f, 0.0f); // 取第一个块
+							cloud_pos_target = -1.427;
+							vTaskDelay(700);
+							exp_height_3508 = 300;
+							vTaskDelay(700);
+							exp_flexible_len = 40;
+							vTaskDelay(200);
+							exp_height_3508 = 170;
+							vTaskDelay(400);
+							cloud_pos_target = -1.6;
+							vTaskDelay(200);
+							GPIO_Pin_State_Valve = 0;
+							Two_Three_Sign = 1;
+							vTaskDelay(200);
+							exp_height_3508 = 500;
+							vTaskDelay(500);
+							cloud_pos_target = 0;
+							last_count = 3;
+						}
+					}
+				}
+
+				if (run_count == 3)
+				{
+					if (last_count != 4)
+					{
+						GPIO_Pin_State_AirPump = 1;
+						GPIO_Pin_State_Valve = 1;
+						exp_flexible_len = 400;
+						vTaskDelay(300);
+						exp_height_3508 = 500;
+						vTaskDelay(300);
+						exp_flexible_len = 100;
+						PurePursuit_SetTarget(&Pure_Handle, 2.56f, 0.605f, 0.0f); // 准备进有斜坡的一边
+						last_count = 4;
+					}
+				}
+
+				if (run_count == 4)
+				{
+					if (last_count != 5)
+					{
+						Pure_Handle.target_theta = 1.55f;
+						vTaskDelay(700);
+						Pure_Handle.max_velocity = 0.7f;
+						PurePursuit_SetTarget(&Pure_Handle, 8.63f, 0.65f, 1.55f); // 准备上斜坡
+						last_count = 5;
+					}
+				}
+
+				if (run_count == 5)
+				{
+					if (last_count != 6)
+					{
+						PurePursuit_SetTarget(&Pure_Handle, 11.3f, 0.85f, 1.55f); // 第九个点
+						last_count = 6;
+						g_mgr.slots[0].in_use = 0;
+						vTaskDelete(NULL);
+					}
+				}
 			}
-			
-			if(MerLin_State_flag == 2)
+			if (MerLin_State_flag == 2) // 3,6,9有两个
 			{
-				
 			}
-			
-			if(MerLin_State_flag == 3)
+
+			if (MerLin_State_flag == 3) // 5,8,11有两个
 			{
-				
 			}
-			
-			if(MerLin_State_flag == 4)
+
+			if (MerLin_State_flag == 4) // 0,1,2有一个，3，6，9有一个
 			{
-				
 			}
-			
-			if(MerLin_State_flag == 5)
+
+			if (MerLin_State_flag == 5) // 0,1,2有一个，5，8，11有一个
 			{
-				
 			}
-			
-			if(MerLin_State_flag == 6)
+
+			if (MerLin_State_flag == 6) // 0,1,2有一个，10有一个
 			{
-				
 			}
-			
-			if(MerLin_State_flag == 7)
+
+			if (MerLin_State_flag == 7) // 3，6，9有一个，5，8，11有一个
 			{
-				
 			}
-			
-			if(MerLin_State_flag == 8)
+
+			if (MerLin_State_flag == 8) // 3，6，9有一个，10有一个
 			{
-				
 			}
-			
-			if(MerLin_State_flag == 9)
+
+			if (MerLin_State_flag == 9) // 5，8，11有一个，10有一个
 			{
-				
 			}
-			
 		}
-		
+
 		vTaskDelayUntil(&last_wake_time, pdMS_TO_TICKS(10));
 	}
 }
 
-
 uint8_t GetReturnValue(void)
 {
-    uint8_t count_012 = MerLin_Pack.MerLin[0] + MerLin_Pack.MerLin[1] + MerLin_Pack.MerLin[2];//1或2
-    uint8_t count_369 = MerLin_Pack.MerLin[3] + MerLin_Pack.MerLin[6] + MerLin_Pack.MerLin[9];//1或2
-    uint8_t count_5811 = MerLin_Pack.MerLin[5] + MerLin_Pack.MerLin[8] + MerLin_Pack.MerLin[11];//1或2
-    uint8_t val_10 = MerLin_Pack.MerLin[10];//1
-    
-		if(count_012 == 2)
-		{
-			
-			return 1;
-		}
-    if(count_369 == 2)
-		{
-			
-			return 2;
-		}
-		
-		if(count_5811 == 2)
-		{
-			
-			return 3;
-		}
-		
-		if(count_012 == 1 && count_369 == 1)
-		{
-			
-			return 4;
-		}
-		
-		if(count_012 == 1 && count_5811 == 1)
-		{
-			
-			return 5;
-		}
-		
-		if(count_012 == 1 && val_10 == 1)
-		{
-			
-			return 6;
-		}
-		
-		if(count_369 == 1 && count_5811 == 1)
-		{
-			
-			return 7;
-		}
-		
-		if(count_369 == 1 && val_10 == 1)
-		{
-			
-			return 8;
-		}
-		
-		if(count_5811 == 1 && val_10 == 1)
-		{
-			
-			return 9;
-		}
-		
-		return 0;
+	uint8_t count_012 = MerLin_Pack.MerLin[0] + MerLin_Pack.MerLin[1] + MerLin_Pack.MerLin[2];	 // 1或2
+	uint8_t count_369 = MerLin_Pack.MerLin[3] + MerLin_Pack.MerLin[6] + MerLin_Pack.MerLin[9];	 // 1或2
+	uint8_t count_5811 = MerLin_Pack.MerLin[5] + MerLin_Pack.MerLin[8] + MerLin_Pack.MerLin[11]; // 1或2
+	uint8_t val_10 = MerLin_Pack.MerLin[10];													 // 1
+
+	if (count_012 == 2)
+	{
+
+		return 1;
+	}
+	if (count_369 == 2)
+	{
+
+		return 2;
+	}
+
+	if (count_5811 == 2)
+	{
+
+		return 3;
+	}
+
+	if (count_012 == 1 && count_369 == 1)
+	{
+
+		return 4;
+	}
+
+	if (count_012 == 1 && count_5811 == 1)
+	{
+
+		return 5;
+	}
+
+	if (count_012 == 1 && val_10 == 1)
+	{
+
+		return 6;
+	}
+
+	if (count_369 == 1 && count_5811 == 1)
+	{
+
+		return 7;
+	}
+
+	if (count_369 == 1 && val_10 == 1)
+	{
+
+		return 8;
+	}
+
+	if (count_5811 == 1 && val_10 == 1)
+	{
+
+		return 9;
+	}
+
+	return 0;
 }
 
 void Auto_Place_Block_Action(void *param)//三区放块儿
@@ -521,16 +700,3 @@ void Action(void *param)
 		vTaskDelayUntil(&Last_wake_time, pdMS_TO_TICKS(10));
 	}
 }
-
-/*if(KFS == 2)则先旋转在吸2
-		然后判断11有没有
-			if(1,4,7,10有)则进斜坡前的通道
-			if(1,4, 7,10没有)则进另一边的通道去吸最小号
-				
-	if(KFS != 2)
-		if(1,4,7,10有两个),则去吸这两个
-		if(1,4,7,10有一个)，则去吸这一个，再去吸另一个
-		if(1,4,7,10一个也没有)
-			if(11没有)
-			if(11有)
-*/
