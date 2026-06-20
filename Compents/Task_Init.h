@@ -16,17 +16,17 @@
 #define MAX_ROBOT_OMEGA ANGLE2RAD(60.0f)
 #define arm1 200.0f
 #define arm2 210.0f
-#define Initial_Laser_Distance 200.0f
+#define Initial_Laser_Distance 150.0f
 
 extern Wit_Data_t my_imu;
 
 void Task_Init(void);
 
 typedef struct{
-    RobStride_t   Rs_motor[2];
-    Motor3508Ex_t RM3508_motor[2];
+    RobStride_t   Rs_motor[3];
+    Motor3508Ex_t RM3508_motor;
 		
-    float pos_offset[2];
+    float pos_offset[3];
     float exp_rad[2];
     PID2  Rs_vel_pid[2];
     PID2  Rs_pos_pid[2];
@@ -70,6 +70,7 @@ typedef struct
     uint8_t head;
     float expectDirection[2];
     float expextVelocity[2];
+		uint32_t key;
 		ChassisMode Mode;
 		uint8_t Action_Sign;
     uint8_t tail;
@@ -107,5 +108,7 @@ typedef struct {
 	uint16_t crc;
 }Arm_TransRemote_t;
 #pragma pack()
+
+bool RampToTarget(float *val, float target, float step);
 
 #endif

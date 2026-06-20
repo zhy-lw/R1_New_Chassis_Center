@@ -28,13 +28,13 @@ uint32_t RobStrideEnable(RobStride_t *device)
 uint32_t RobStrideDisable(RobStride_t *device, uint8_t clear_error)
 {
     uint8_t buf[8] = {clear_error};
-    return RobStrideSend(device, (4 << 24) | (device->host_id << 8) | (device->motor_id), buf); // 发送使能命令
+    return RobStrideSend(device, (4 << 24) | (device->host_id << 8) | (device->motor_id), buf);
 }
 
 uint32_t RobStrideResetAngle(RobStride_t *device)
 {
     uint8_t buf[8] = {1};
-    return RobStrideSend(device, (6 << 24) | (device->host_id << 8) | (device->motor_id), buf); // 发送使能命令
+    return RobStrideSend(device, (6 << 24) | (device->host_id << 8) | (device->motor_id), buf);
 }
 
 uint32_t RobStrideGet(RobStride_t *device, uint16_t cmd)

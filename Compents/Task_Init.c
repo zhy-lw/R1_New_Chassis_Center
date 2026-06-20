@@ -17,6 +17,8 @@
 #include "Navigation.h"
 #include "math.h"
 
+#include "Servo.h"
+
 //底盘
 SteeringWheel steeringWheelArray[4];
 Wheel_t wheelArray[4];
@@ -29,15 +31,21 @@ float cloud_pos_target = 0.0f;//云台
 float exp_height_3508 = 0.0f;//升降
 float over_turn_pos = 0.0f;//翻转
 float flexible_pos = 0.0f;//伸缩
+volatile  float Kp_flexible = 0.0f;
+volatile float Kd_flexible = 0.0f;
+volatile  float Kp_CloudPlatform = 0.0f;
+volatile float Kd_CloudPlatform = 0.0f;
 
 int16_t can1_3508_Tx_Data[4]={0};//3508
-uint8_t Joint_Enabled[2] = {1,1};//使能
+uint8_t Joint_Enabled = 1;//使能
 
 //气泵
-GPIO_PinState GPIO_Pin_State = 0;
+GPIO_PinState GPIO_Pin_State_AirPump = 0;
+GPIO_PinState GPIO_Pin_State_Valve = 0;
 
 //句柄
 TaskHandle_t Arm_Task_Handle;
+TaskHandle_t Arm_3508_Task_Handle;
 TaskHandle_t Remote_Analysis_Handle;
 TaskHandle_t Uart_Tx_Handle;
 TaskHandle_t Auto_Navigatoin_Handle;
@@ -68,34 +76,37 @@ void Remote_Analysis_Task(void *pvParameters);
 void Uart_Tx(void *pvParameters);
 void Auto_Navigatoin(void *para);
 void Arm_Task(void *param);
-
+void Arm_3508_Task(void *param);
 //声明
 void Motor_init();
-bool RampToTarget(float *val, float target, float step);
 
 //模式
 ChassisMode Mode = REMOTE;
 
 //伸展PID
 PID2 One_Four_PID, Two_Three_PID;
-float expect_len = Initial_Laser_Distance;
+float expect_len = 0.0f;
 
 //底盘动作变量
 uint8_t Two_Three_Sign = 0;
 uint8_t One_Four_Sign = 0;
-
+extern int32_t Ramp_Value_Servo[4];
 // 角度标准化到 [-π, π]
 float NormalizeAngle_Rad(float angle) {
-    while (angle > PI)    angle -= 2 * PI;
-    while (angle < -PI)   angle += 2 * PI;
+    int guard = 0;
+    while (angle > PI && guard < 10) { angle -= 2 * PI; guard++; }
+    guard = 0;
+    while (angle < -PI && guard < 10) { angle += 2 * PI; guard++; }
+    if (angle > PI) angle = PI;
+    if (angle < -PI) angle = -PI;
     return angle;
 }
 
-// 获取短弧差值
 float GetShortArcDiff(float current, float target) {
     float diff = target - current;
     return NormalizeAngle_Rad(diff);
 }
+
 PID2 PID_Theta;
 void Task_Init(void)
 {
@@ -120,7 +131,7 @@ void Task_Init(void)
     wheelArray[3].pos.x =  -0.325f;
     wheelArray[3].pos.y =  0.280f;
     wheelArray[3].pos.z =  PI / 4.0f;
-	
+		
     for(int i = 0; i < 4; i++)
     {
         wheelArray[i].user_data = &steeringWheelArray[i];
@@ -129,12 +140,13 @@ void Task_Init(void)
     }
 		
     Vector2D barycenter = {0, 0};
-    ChassisInit(&chassis, wheelArray, 4, barycenter, 25.2f, 1.25f, 0.0005f, 2, 400, 4);
+    ChassisInit(&chassis, wheelArray, 4, barycenter, 25.2f, 1.25f, 0.0005f, 2, 300, 4);
 		
-		vTaskDelay(500);
+		vTaskDelay(700);
 		Motor_init();
 
-		xTaskCreate(Arm_Task,"Arm_Task", 400, NULL, 5, &Arm_Task_Handle);
+		xTaskCreate(Arm_Task,"Arm_Task", 256, NULL, 5, &Arm_Task_Handle);
+		xTaskCreate(Arm_3508_Task,"Arm_3508_Task",256,NULL, 5,&Arm_3508_Task_Handle);
 		xTaskCreate(Remote_Analysis_Task, "Remote_Analysis_Task", 180, NULL, 4, &Remote_Analysis_Handle);
 		xTaskCreate(Uart_Tx, "Uart_Tx", 256, NULL, 4, &Uart_Tx_Handle);
 		xTaskCreate(Auto_Navigatoin,"Auto_Navigatoin",256,NULL,4,&Auto_Navigatoin_Handle);
@@ -144,48 +156,45 @@ void Task_Init(void)
 
 void Motor_init()
 {
-	Joint.RM3508_motor[0].ID = 0x202;
-	Joint.RM3508_motor[0].hcan = &hcan1;//升降
-	
-	Joint.RM3508_motor[1].ID = 0x203;
-	Joint.RM3508_motor[1].hcan = &hcan1;//伸缩
+	Joint.RM3508_motor.ID = 0x202;
+	Joint.RM3508_motor.hcan = &hcan1;//升降
 	
 	vTaskDelay(5000);
-	RobStrideInit(&Joint.Rs_motor[0], &hcan1, 0x01, RobStride_EL05);//云台
-	vTaskDelay(1);
-	RobStrideInit(&Joint.Rs_motor[1], &hcan1, 0x04, RobStride_EL05);//翻转
+	RobStrideInit(&Joint.Rs_motor[0], &hcan2, 0x01, RobStride_EL05);//云台
 	vTaskDelay(100);
-	RobStrideSetMode(&Joint.Rs_motor[0], RobStride_Torque);
-	vTaskDelay(1);
+	RobStrideInit(&Joint.Rs_motor[1], &hcan2, 0x04, RobStride_EL05);//翻转
+	vTaskDelay(100);
+	RobStrideInit(&Joint.Rs_motor[2], &hcan1, 0x03, RobStride_EL05);//伸缩
+	vTaskDelay(100);
+	RobStrideDisable(&Joint.Rs_motor[0], 1);  // clear_error=1
+	vTaskDelay(100);
+	RobStrideDisable(&Joint.Rs_motor[1], 1);
+	vTaskDelay(100);
+	RobStrideDisable(&Joint.Rs_motor[2], 1);
+	vTaskDelay(100);
+	RobStrideSetMode(&Joint.Rs_motor[0], RobStride_MotionControl);
+	vTaskDelay(100);
 	RobStrideSetMode(&Joint.Rs_motor[1], RobStride_MotionControl);
 	vTaskDelay(100);
+	RobStrideSetMode(&Joint.Rs_motor[2], RobStride_MotionControl);
+	vTaskDelay(100);
   RobStrideEnable(&Joint.Rs_motor[0]);
-  vTaskDelay(1);
+  vTaskDelay(100);
   RobStrideEnable(&Joint.Rs_motor[1]);
+	vTaskDelay(100);
+	RobStrideEnable(&Joint.Rs_motor[2]);
 	
-	Joint.RM3508_motor[0].pos_pid.Kp = 0.06f;
-	Joint.RM3508_motor[0].pos_pid.Ki = 0.0f;
-	Joint.RM3508_motor[0].pos_pid.Kd = 0.0f;
-	Joint.RM3508_motor[0].pos_pid.limit = 10000.0f;
-	Joint.RM3508_motor[0].pos_pid.output_limit = 9000.0f;
+	Joint.RM3508_motor.pos_pid.Kp = 0.06f;
+	Joint.RM3508_motor.pos_pid.Ki = 0.0f;
+	Joint.RM3508_motor.pos_pid.Kd = 0.0f;
+	Joint.RM3508_motor.pos_pid.limit = 10000.0f;
+	Joint.RM3508_motor.pos_pid.output_limit = 9000.0f;
 	
-	Joint.RM3508_motor[0].vel_pid.Kp = 1.7f;
-	Joint.RM3508_motor[0].vel_pid.Ki = 0.05f;
-	Joint.RM3508_motor[0].vel_pid.Kd = 0.0f;
-	Joint.RM3508_motor[0].vel_pid.limit = 10000.0f;
-	Joint.RM3508_motor[0].vel_pid.output_limit = 16384.0f;//升降
-
-	Joint.RM3508_motor[1].pos_pid.Kp = 0.05f;
-	Joint.RM3508_motor[1].pos_pid.Ki = 0.0f;
-	Joint.RM3508_motor[1].pos_pid.Kd = 0.0f;
-	Joint.RM3508_motor[1].pos_pid.limit = 10000.0f;
-	Joint.RM3508_motor[1].pos_pid.output_limit = 9000.0f;
-	
-	Joint.RM3508_motor[1].vel_pid.Kp = 4.0f;
-	Joint.RM3508_motor[1].vel_pid.Ki = 0.1f;
-	Joint.RM3508_motor[1].vel_pid.Kd = 0.0f;
-	Joint.RM3508_motor[1].vel_pid.limit = 10000.0f;
-	Joint.RM3508_motor[1].vel_pid.output_limit = 16384.0f;//伸缩
+	Joint.RM3508_motor.vel_pid.Kp = 1.7f;
+	Joint.RM3508_motor.vel_pid.Ki = 0.05f;
+	Joint.RM3508_motor.vel_pid.Kd = 0.0f;
+	Joint.RM3508_motor.vel_pid.limit = 10000.0f;
+	Joint.RM3508_motor.vel_pid.output_limit = 16384.0f;//升降
 	
 	Joint.Rs_pos_pid[0].Kp = 6.0f;
 	Joint.Rs_pos_pid[0].Ki = 0.0f;
@@ -193,22 +202,30 @@ void Motor_init()
 	Joint.Rs_pos_pid[0].limit = 10.0f;
 	Joint.Rs_pos_pid[0].output_limit = 50.0f;
 	
-	Joint.Rs_vel_pid[0].Kp = 1.7f;
-	Joint.Rs_vel_pid[0].Ki = 0.07f;
+	Joint.Rs_vel_pid[0].Kp = 1.5f;
+	Joint.Rs_vel_pid[0].Ki = 0.05f;
 	Joint.Rs_vel_pid[0].Kd = 0.0f;
 	Joint.Rs_vel_pid[0].limit = 1000.0f;
 	Joint.Rs_vel_pid[0].output_limit = 6.0f;//云台
 	
+	Kp_flexible = 100.0f;
+	Kd_flexible = 2.0f;
+	
+	Kp_CloudPlatform = 15.0f;
+	Kd_CloudPlatform = 0.7f;
+	Ramp_Value_Servo[0] = 500;
+	Ramp_Value_Servo[1] = 500;
+	Ramp_Value_Servo[2] = 500;
+	Ramp_Value_Servo[3] = 500;
+	expect_len = Initial_Laser_Distance;
 	vTaskDelay(1000);
 }
 float exp_scale_3508_t = 0.0f;//升降
 float exp_sclae_Rs_t = 0.0f;//云台
-float exp_flexible_len = 0.0f;//伸缩
+float exp_flexible_len = 64.0f;//伸缩
 
-float Length_To_Scale(float target_len) 
+float Length_To_Scale(float target_len) //
 {
-	if(target_len<64.0312f)
-	return 0.0f;
 	if(target_len>410.0f || target_len==410.0f)	
 	target_len = 405.0f;
 	
@@ -216,50 +233,32 @@ float Length_To_Scale(float target_len)
   float target_rad= (M_PI/2-alpha)*5/3;
 	if(target_rad>2.34f)
 		target_rad = 2.34f;
-	float scale = target_rad/(2*M_PI)*19*8192;
-	return scale;
+	 return target_rad;
 }
 
 float Kp_t = 100.0f;
 float Kd_t = 2.0f;
+float yuntai_Ramp = 0.06f;
 
 void Arm_Task(void *param)
 {
 	TickType_t Last_wake_time = xTaskGetTickCount();
 	
 	Joint.pos_offset[0] = 3.3859f;
-	Joint.pos_offset[1] = 1.01054072f;
-	
+	Joint.pos_offset[1] = 5.16852283f;
+	Joint.pos_offset[2] = 2.9348f;
 	for (;;)
 	{
-		//升降 最大565
-		float exp_scale_3508 = exp_height_3508/(2*M_PI*14.46)*19*8192;
-		RampToTarget(&exp_scale_3508_t, exp_scale_3508, 10000.0f);
-		PID_Control2(Joint.RM3508_motor[0].actual_pos,exp_scale_3508_t,&Joint.RM3508_motor[0].pos_pid);
-		PID_Control2(Joint.RM3508_motor[0].motor.Speed,Joint.RM3508_motor[0].pos_pid.pid_out,&Joint.RM3508_motor[0].vel_pid);
-    can1_3508_Tx_Data[1] = Joint.RM3508_motor[0].vel_pid.pid_out;
-		
 		//云台
 		float target_scale_Rs = cloud_pos_target * 3.5f;
-		RampToTarget(&exp_sclae_Rs_t,target_scale_Rs,0.015f);
-		PID_Control2(Joint.Rs_motor[0].state.rad, exp_sclae_Rs_t + Joint.pos_offset[0], &Joint.Rs_pos_pid[0]);//pos_offset[0]
-    PID_Control2(Joint.Rs_motor[0].state.omega, Joint.Rs_pos_pid[0].pid_out, &Joint.Rs_vel_pid[0]);
-		RobStrideTorqueControl(&Joint.Rs_motor[0], Joint.Rs_vel_pid[0].pid_out * Joint_Enabled[0]);
+		RampToTarget(&exp_sclae_Rs_t,target_scale_Rs, yuntai_Ramp);
+		RobStrideMotionControl(&Joint.Rs_motor[0], 0x01, 0, Joint.pos_offset[0] + exp_sclae_Rs_t, 0, Kp_CloudPlatform, Kd_CloudPlatform);
 		
 		//翻转
 		RobStrideMotionControl(&Joint.Rs_motor[1], 0x04, 0, Joint.pos_offset[1] + (over_turn_pos * 2.0f), 0, Kp_t, Kd_t);
 		
-		//伸缩
-		flexible_pos = - Length_To_Scale(exp_flexible_len);
-		PID_Control2(Joint.RM3508_motor[1].actual_pos,flexible_pos,&Joint.RM3508_motor[1].pos_pid);
-		PID_Control2(Joint.RM3508_motor[1].motor.Speed, Joint.RM3508_motor[1].pos_pid.pid_out, &Joint.RM3508_motor[1].vel_pid);
-    can1_3508_Tx_Data[2] = Joint.RM3508_motor[1].vel_pid.pid_out * 0;
-		
-		MotorSend(&hcan1,0x200,can1_3508_Tx_Data);
-		
-		//气泵
-		HAL_GPIO_WritePin(GPIOB, GPIO_PIN_11, GPIO_Pin_State);
-    HAL_GPIO_WritePin(GPIOB, GPIO_PIN_10, GPIO_Pin_State);
+		HAL_GPIO_WritePin(GPIOB, GPIO_PIN_11, GPIO_Pin_State_AirPump);//气泵
+    HAL_GPIO_WritePin(GPIOB, GPIO_PIN_10, GPIO_Pin_State_Valve);//电磁阀
 		
 		if(Mode == AUTO)
 		{
@@ -275,7 +274,27 @@ void Arm_Task(void *param)
 		vTaskDelayUntil(&Last_wake_time, pdMS_TO_TICKS(5));
 	}
 }
-
+TaskHandle_t Arm_3508_Task_Handle;
+void Arm_3508_Task(void *param)
+{
+	TickType_t Last_wake_time = xTaskGetTickCount();
+	while(1)
+	{
+		//升降 最大565
+		float exp_scale_3508 = exp_height_3508/(2*M_PI*14.46)*19*8192;
+		RampToTarget(&exp_scale_3508_t, exp_scale_3508, 10000.0f);
+		PID_Control2(Joint.RM3508_motor.actual_pos,exp_scale_3508_t,&Joint.RM3508_motor.pos_pid);
+		PID_Control2(Joint.RM3508_motor.motor.Speed,Joint.RM3508_motor.pos_pid.pid_out,&Joint.RM3508_motor.vel_pid);
+    can1_3508_Tx_Data[1] = Joint.RM3508_motor.vel_pid.pid_out;
+		
+		//伸缩
+		flexible_pos = Length_To_Scale(exp_flexible_len);
+		RobStrideMotionControl(&Joint.Rs_motor[2], 0x03, 0, Joint.pos_offset[2] + flexible_pos, 0, Kp_flexible, Kd_flexible);
+		
+		MotorSend(&hcan1,0x200,can1_3508_Tx_Data);
+		vTaskDelayUntil(&Last_wake_time, pdMS_TO_TICKS(5));
+	}
+}
 //遥控器摇杆结构体
 PackControl_t recv_pack;
 uint8_t recv_buff[20] = {0};
@@ -315,6 +334,7 @@ float apply_s_curve(float normalized_value)	//s曲线
     
     return (normalized_value > 0.0f) ? s : -s;
 }
+
 void Remote_Analysis()
 {
     if(xSemaphoreTake(Remote_semaphore, pdMS_TO_TICKS(200)) == pdTRUE)
@@ -401,34 +421,36 @@ void Auto_Navigatoin(void *para)
 	Pure_Handle.target_y = 2.65f;
 	Pure_Handle.target_theta = 0.0f;
 	
-	One_Four_PID.Kp = 0.001f;
-	One_Four_PID.Ki = 0.0f;
+	One_Four_PID.Kp = 0.0015f;
+	One_Four_PID.Ki = 0.000012f;
 	One_Four_PID.Kd = 0.0f;
 	One_Four_PID.limit = 10.0f;
-	One_Four_PID.output_limit = 0.3f;
+	One_Four_PID.output_limit = 0.7f;
 	
-	Two_Three_PID.Kp = 0.001f;
-	Two_Three_PID.Ki = 0.0f;
+	Two_Three_PID.Kp = 0.0015f;
+	Two_Three_PID.Ki = 0.000012f;
 	Two_Three_PID.Kd = 0.0f;
 	Two_Three_PID.limit = 10.0f;
-	Two_Three_PID.output_limit = 0.3f;
+	Two_Three_PID.output_limit = 0.7f;
 	
 	PID_Theta.Kp = 1.1f;
 	PID_Theta.Ki = 0.0f;
 	PID_Theta.Kd = 3.5f;
 	PID_Theta.limit = 1000.0f;
-	PID_Theta.output_limit = 2.5f;
+	PID_Theta.output_limit = 2.0f;
 	
 	while(1)
 	{
+		Servo_control();
 		if(Remote_Control.First.Left_Switch_Up == 1)
 		{
 			Mode = AUTO;
 		}
 		
-		if(Remote_Control.First.Left_Switch_Up == 0  && Remote_Control.First.Left_Switch_Down == 0 )//遥控模式(左上 按键)
+		if((Remote_Control.First.Left_Switch_Up == 0  && Remote_Control.Second.Left_Switch_Up == 1) || (Remote_Control.First.Left_Switch_Down == 0  && Remote_Control.Second.Left_Switch_Down == 1))//遥控模式(左上 按键)
 		{
 			Mode = REMOTE;
+			vTaskResume(task_handle);
 		}
 		
 		if(Remote_Control.First.Left_Switch_Down == 1)
@@ -442,6 +464,44 @@ void Auto_Navigatoin(void *para)
 			chassis.exp_vel.y = Remote_Control.Ey;
 			chassis.exp_vel.z = Remote_Control.Eomega;
 		}
+		
+		if(Mode == STRETCH)
+		{
+			if(Remote_Control.First.Right_Switch_Down == 1)
+			{
+				if(Remote_Control.First.Right_Key_Up == 1 && Remote_Control.Second.Right_Key_Up == 0)//伸展变型(右上 按键)
+				{
+					vTaskSuspend(task_handle);
+					steeringWheelArray[0].expectDirection = -135.0f;
+					steeringWheelArray[3].expectDirection = -135.0f;//向左
+					
+					steeringWheelArray[1].expectDirection = 45.0f;
+					steeringWheelArray[2].expectDirection = 45.0f;//向右
+					expect_len = 500;
+				}
+				
+				if(Remote_Control.First.Right_Key_Down == 1 && Remote_Control.Second.Right_Key_Down == 0)
+				{
+					vTaskSuspend(task_handle);
+					steeringWheelArray[0].expectDirection = -135.0f;
+					steeringWheelArray[3].expectDirection = -135.0f;//向左
+					
+					steeringWheelArray[1].expectDirection = 45.0f;
+					steeringWheelArray[2].expectDirection = 45.0f;//向右
+					expect_len = 150;
+				}
+			}
+			
+			PID_Control2(DT_35_Len.spi2, expect_len, &One_Four_PID);
+			PID_Control2(DT_35_Len.spi2, expect_len, &Two_Three_PID);
+			steeringWheelArray[0].expextVelocity = One_Four_PID.pid_out;
+			steeringWheelArray[3].expextVelocity = One_Four_PID.pid_out;
+			
+			steeringWheelArray[1].expextVelocity = Two_Three_PID.pid_out;
+			steeringWheelArray[2].expextVelocity = Two_Three_PID.pid_out;
+			
+		}
+		
 		PurePursuit_SetCurrent(&Pure_Handle, pos_world.x, pos_world.y, pos_world.yaw);
 		PurePursuit_Update(&Pure_Handle);
 		
@@ -489,6 +549,8 @@ void Uart_Tx(void *pvParameters)
 		pack_t[1].Mode = Mode;
 		pack_t[0].Action_Sign = One_Four_Sign;
 		pack_t[1].Action_Sign = Two_Three_Sign;
+		pack_t[0].key = recv_pack.Key;
+		pack_t[1].key = recv_pack.Key;
 		if(HAL_UART_GetState(&huart2) == HAL_UART_STATE_READY)
 		{
 			HAL_UART_Transmit_DMA(&huart2, (uint8_t *)&pack_t[0], sizeof(Pack_TransRemote_t));
@@ -564,15 +626,16 @@ void HAL_CAN_RxFifo0MsgPendingCallback(CAN_HandleTypeDef *hcan)
 {
 	uint8_t Recv[8];
 	uint32_t ID = CAN_Receive_DataFrame(&hcan1, Recv);
-	Motor3508Recv(&Joint.RM3508_motor[0],hcan, ID, Recv);
-	Motor3508Recv(&Joint.RM3508_motor[1],hcan, ID, Recv);
-	RobStrideRecv_Handle(&Joint.Rs_motor[0], hcan, ID, Recv);
-	RobStrideRecv_Handle(&Joint.Rs_motor[1], hcan, ID, Recv);
+	Motor3508Recv(&Joint.RM3508_motor,hcan, ID, Recv);
+	RobStrideRecv_Handle(&Joint.Rs_motor[2], hcan, ID, Recv);
 }
+
 void HAL_CAN_RxFifo1MsgPendingCallback(CAN_HandleTypeDef *hcan)
 {
 	uint8_t Recv[8] = {0};
 	uint32_t ID = CAN_Receive_DataFrame(hcan, Recv);
+	RobStrideRecv_Handle(&Joint.Rs_motor[0], hcan, ID, Recv);
+	RobStrideRecv_Handle(&Joint.Rs_motor[1], hcan, ID, Recv);
 	if (hcan->Instance == CAN2)
   {
     if (ID == 0x610)
@@ -581,6 +644,7 @@ void HAL_CAN_RxFifo1MsgPendingCallback(CAN_HandleTypeDef *hcan)
     }
   }
 }
+
 //斜坡
 bool RampToTarget(float *val, float target, float step)
 {
