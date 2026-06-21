@@ -37,7 +37,7 @@ void Auto_Rod_Retrieval_Action(void *param)//一区取杆儿
 		{
 			if(last_count != 1)
 			{
-				PurePursuit_SetTarget(&Pure_Handle, 0.85f, 2.079f, 0.0f);//第一个点
+				PurePursuit_SetTarget(&Pure_Handle, 0.85f, 2.07f, 0.0f);//第一个点
 				exp_height_3508 = 400;
 				Action_Sign = 1;//爪1和爪2张开，后05倾斜
 				last_count = 1;
@@ -48,7 +48,7 @@ void Auto_Rod_Retrieval_Action(void *param)//一区取杆儿
 		{
 			if(last_count != 2)
 			{
-				PurePursuit_SetTarget(&Pure_Handle, 0.625f, 2.079f, 0.0f);//第二个点
+				PurePursuit_SetTarget(&Pure_Handle, 0.615f, 2.07f, 0.0f);//第二个点
 				last_count = 2;
 			}
 		}
@@ -59,8 +59,8 @@ void Auto_Rod_Retrieval_Action(void *param)//一区取杆儿
 			{
 				Pure_Handle.max_velocity = 0.65f;
 				Action_Sign = 2;//闭合爪2,闭合完成后将后杆竖直
-				vTaskDelay(2500);
-				PurePursuit_SetTarget(&Pure_Handle, 1.2f, 2.079f, 0.0f);//第三个点
+				vTaskDelay(3000);
+				PurePursuit_SetTarget(&Pure_Handle, 1.2f, 2.07f, 0.0f);//第三个点
 				Action_Sign = 3;//将05竖直放杆，然后闭合爪1
 				last_count = 3;
 			}
@@ -249,6 +249,7 @@ extern MerLin_Pack_t MerLin_Pack;
 
 uint8_t index_no_fetch = 0;//那个没拿索引
 uint8_t index_State_Two = 0;//2侧状态
+uint8_t index_State_Three = 0;//1侧状态
 void Auto_KFS_Action(void *param)
 {
 	TickType_t last_wake_time = xTaskGetTickCount();
@@ -523,8 +524,8 @@ void Auto_KFS_Action(void *param)
 					//先去吸6，然后吸9
 					if(last_count != 3)
 					{
-						Pure_Handle.max_velocity = 0.7f;
-						PurePursuit_SetTarget(&Pure_Handle, 6.29f, 0.80f, 1.55f);//去吸6
+						Pure_Handle.max_velocity = 0.66f;
+						PurePursuit_SetTarget(&Pure_Handle, 6.37f, 0.80f, 1.55f);//去吸6
 						vTaskDelay(500);
 						GPIO_Pin_State_AirPump = 1;
 						GPIO_Pin_State_Valve = 1;
@@ -630,7 +631,7 @@ void Auto_KFS_Action(void *param)
 						exp_height_3508 = 500;
 						vTaskDelay(300);
 						exp_flexible_len = 40;
-						PurePursuit_SetTarget(&Pure_Handle, 6.29f, 0.80f, 1.55f);//吸6
+						PurePursuit_SetTarget(&Pure_Handle, 6.37f, 0.80f, 1.55f);//吸6
 						cloud_pos_target = -1.35;
 						vTaskDelay(700);
 						exp_height_3508 = 270;
@@ -722,17 +723,525 @@ void Auto_KFS_Action(void *param)
 				}
 			}
 		}
+		
 		if (MerLin_State_flag == 3) // 5,8,11有两个
 		{
+			if(run_count == 1)
+			{
+				if(last_count != 2)
+				{
+					Pure_Handle.max_velocity = 0.45f;
+					Pure_Handle.target_theta = 0.0f;
+					vTaskDelay(1700);
+					PurePursuit_SetTarget(&Pure_Handle, 2.56f, 5.35f, 0.0f);
+					exp_flexible_len = 100;
+					exp_height_3508 = 450;//高度600
+					over_turn_pos = 1.5;
+					last_count = 2;
+				}
+			}
 			
+			if(run_count == 2)
+			{
+				if(MerLin_Pack.MerLin[5] != 1)
+				{
+					if(last_count != 3)
+					{
+						Pure_Handle.max_velocity = 0.4f;
+						Pure_Handle.target_theta = -1.55f;
+						vTaskDelay(1700);
+						PurePursuit_SetTarget(&Pure_Handle, 6.15f, 5.26f, -1.55f);//吸8
+						vTaskDelay(500);
+						GPIO_Pin_State_AirPump = 1;
+						GPIO_Pin_State_Valve = 1;
+						index_State_Three = 1;
+						last_count = 3;
+					}
+				}
+				
+				if(MerLin_Pack.MerLin[8] != 1)
+				{
+					if(last_count != 3)
+					{
+						Pure_Handle.max_velocity = 0.4f;
+						Pure_Handle.target_theta = -1.55f;
+						vTaskDelay(1700);
+						PurePursuit_SetTarget(&Pure_Handle,  4.90f, 5.26f, -1.55f);//吸5
+						vTaskDelay(500);
+						GPIO_Pin_State_AirPump = 1;
+						GPIO_Pin_State_Valve = 1;
+						index_State_Three = 2;
+						last_count = 3;
+					}
+				}
+				
+				if(MerLin_Pack.MerLin[11] != 1)
+				{
+					if(last_count != 3)
+					{
+						Pure_Handle.max_velocity = 0.4f;
+						Pure_Handle.target_theta = -1.55f;
+						vTaskDelay(1700);
+						PurePursuit_SetTarget(&Pure_Handle,  4.90f, 5.26f, -1.55f);//吸5
+						vTaskDelay(500);
+						GPIO_Pin_State_AirPump = 1;
+						GPIO_Pin_State_Valve = 1;
+						index_State_Three = 3;
+						last_count = 3;
+					}
+				}
+			}
+
+			if(run_count == 3)
+			{
+				if(index_State_Three == 1)
+				{
+					if(last_count != 4)
+					{
+						Pure_Handle.max_velocity = 0.7f;
+						exp_height_3508 = 250;//高度400
+						vTaskDelay(300);
+						exp_flexible_len = 400;
+						vTaskDelay(300);
+						exp_height_3508 = 500;
+						vTaskDelay(300);
+						exp_flexible_len = 40;
+						PurePursuit_SetTarget(&Pure_Handle, 6.15f, 5.58f, -1.55f);//后退
+						last_count = 4;
+					}
+				}
+
+				if(index_State_Three == 2)
+				{
+					if(last_count != 4)
+					{
+						Pure_Handle.max_velocity = 0.7f;
+						exp_height_3508 = 450;//高度600
+						vTaskDelay(300);
+						exp_flexible_len = 400;
+						vTaskDelay(300);
+						exp_height_3508 = 500;
+						vTaskDelay(300);
+						exp_flexible_len = 40;
+						PurePursuit_SetTarget(&Pure_Handle, 4.90f, 5.58f, -1.55f);//后退
+						last_count = 4;
+					}
+				}
+
+				if(index_State_Three == 3)
+				{
+					if(last_count != 4)
+					{
+						Pure_Handle.max_velocity = 0.7f;
+						exp_height_3508 = 450;//高度600
+						exp_flexible_len = 400;
+						vTaskDelay(300);
+						exp_height_3508 = 500;
+						vTaskDelay(300);
+						exp_flexible_len = 40;
+						PurePursuit_SetTarget(&Pure_Handle, 4.90f, 5.60f, -1.55f);//后退
+						last_count = 4;
+					}
+				}
+			}
+
+			if(run_count == 4)
+			{
+				if(index_State_Three == 1)
+				{
+					if (last_count != 5)
+					{
+						cloud_pos_target = -1.35;
+						vTaskDelay(700);
+						exp_height_3508 = 270;
+						vTaskDelay(200);
+						PurePursuit_SetTarget(&Pure_Handle, 7.33f, 5.58f, -1.55f);//吸11
+						vTaskDelay(500);
+						cloud_pos_target = -1.6;
+						vTaskDelay(200);
+						GPIO_Pin_State_Valve = 0;
+						Two_Three_Sign = 1;
+						vTaskDelay(200);
+						exp_height_3508 = 500;
+						vTaskDelay(500);
+						cloud_pos_target = 0;
+						last_count = 5;
+					}
+				}
+
+				if(index_State_Three == 2)
+				{
+					if (last_count != 5)
+					{
+						cloud_pos_target = -1.35;
+						vTaskDelay(700);
+						exp_height_3508 = 270;
+						vTaskDelay(200);
+						PurePursuit_SetTarget(&Pure_Handle, 7.33f, 5.58f, -1.55f);//吸11
+						vTaskDelay(500);
+						cloud_pos_target = -1.6;
+						vTaskDelay(200);
+						GPIO_Pin_State_Valve = 0;
+						Two_Three_Sign = 1;
+						vTaskDelay(200);
+						exp_height_3508 = 500;
+						vTaskDelay(500);
+						cloud_pos_target = 0;
+						last_count = 5;
+					}
+				}
+
+				if(index_State_Three == 3)
+				{
+					if (last_count != 5)
+					{
+						cloud_pos_target = -1.35;
+						vTaskDelay(700);
+						exp_height_3508 = 270;
+						vTaskDelay(200);
+						PurePursuit_SetTarget(&Pure_Handle, 6.15f, 5.58f, -1.55f);//吸11
+						vTaskDelay(500);
+						cloud_pos_target = -1.6;
+						vTaskDelay(200);
+						GPIO_Pin_State_Valve = 0;
+						Two_Three_Sign = 1;
+						vTaskDelay(200);
+						exp_height_3508 = 500;
+						vTaskDelay(500);
+						cloud_pos_target = 0;
+						last_count = 5;
+					}
+				}
+			}
+
+			if(run_count == 5)
+			{
+				if(index_State_Three == 1)
+				{
+					if (last_count != 6)
+					{
+						PurePursuit_SetTarget(&Pure_Handle, 7.352f, 5.26f, -1.55f);//吸11
+						GPIO_Pin_State_AirPump = 1;
+						GPIO_Pin_State_Valve = 1;
+						last_count = 6;
+					}
+				}
+
+				if(index_State_Three == 2)
+				{
+					if (last_count != 6)
+					{
+						PurePursuit_SetTarget(&Pure_Handle, 7.33f, 5.26f, -1.55f);//吸11
+						GPIO_Pin_State_AirPump = 1;
+						GPIO_Pin_State_Valve = 1;
+						last_count = 6;
+					}
+				}
+
+				if(index_State_Three == 3)
+				{
+					if (last_count != 6)
+					{
+						PurePursuit_SetTarget(&Pure_Handle, 6.15f, 5.26f, -1.55f);//吸8
+						GPIO_Pin_State_AirPump = 1;
+						GPIO_Pin_State_Valve = 1;
+						last_count = 6;
+					}
+				}
+			}
+
+			if(run_count == 6)
+			{
+				if(index_State_Three == 1)
+				{
+					if (last_count != 7)
+					{
+						exp_height_3508 = 50;//吸11
+						vTaskDelay(500);
+						exp_flexible_len = 400;
+						vTaskDelay(300);
+						exp_flexible_len = 100;
+						exp_height_3508 = 540;
+						vTaskDelay(300);
+						over_turn_pos = 2.7;
+						PurePursuit_SetTarget(&Pure_Handle, 8.70f, 5.57f, -1.55f);//准备准备进斜坡
+						last_count = 7;
+					}
+				}
+
+				if(index_State_Three == 2)
+				{
+					if (last_count != 7)
+					{
+						exp_height_3508 = 50;//吸11
+						vTaskDelay(500);
+						exp_flexible_len = 400;
+						vTaskDelay(300);
+						exp_flexible_len = 100;
+						exp_height_3508 = 540;
+						vTaskDelay(300);
+						over_turn_pos = 2.7;
+						PurePursuit_SetTarget(&Pure_Handle, 8.70f, 5.57f, -1.55f);//准备准备进斜坡
+						last_count = 7;
+					}
+				}
+
+				if(index_State_Three == 3)
+				{
+					if (last_count != 7)
+					{
+						exp_height_3508 = 250;//吸8
+						vTaskDelay(500);
+						exp_flexible_len = 400;
+						vTaskDelay(300);
+						exp_flexible_len = 100;
+						exp_height_3508 = 540;
+						vTaskDelay(300);
+						over_turn_pos = 2.7;
+						PurePursuit_SetTarget(&Pure_Handle, 8.70f, 5.57f, -1.55f); //准备准备进斜坡
+						last_count = 7;
+					}
+				}
+			}
+
+			if (run_count == 7)
+			{
+				if (last_count != 8)
+				{
+					Pure_Handle.max_velocity = 0.8f;
+					PurePursuit_SetTarget(&Pure_Handle, 8.70f, 0.65f, -1.55f); // 准备上斜坡
+					last_count = 8;
+				}
+			}
+
+			if(run_count == 8)
+			{
+				if (last_count != 9)
+				{
+					Pure_Handle.target_theta = 0.0f;
+					vTaskDelay(1500);
+					PurePursuit_SetTarget(&Pure_Handle, 11.3f, 0.85f, 0.0f); //上斜坡
+					last_count = 9;
+				}
+			}
+
+			if(run_count == 9)
+			{
+				if (last_count != 10)
+				{
+					Pure_Handle.target_theta = 1.55f;
+					last_count = 10;
+					g_mgr.slots[0].in_use = 0;
+					vTaskDelete(NULL);
+				}
+			}
 		}
 
 		if (MerLin_State_flag == 4) // 0,1,2有一个，3，6，9有一个
 		{
+			if(run_count == 1)
+			{
+				if(last_count != 2)
+				{
+					Pure_Handle.max_velocity = 0.4f;
+					Pure_Handle.target_theta = 0.0f;
+					vTaskDelay(1000);
+					if(MerLin_Pack.MerLin[0] == 1)
+					{
+						PurePursuit_SetTarget(&Pure_Handle, 2.765f, 1.722f, 0.0f); // 去取第一个格的块儿
+						exp_height_3508 = 250; // 高度400
+					}
+					else if(MerLin_Pack.MerLin[1] == 1)
+					{
+						PurePursuit_SetTarget(&Pure_Handle, 2.767f, 2.90f, 0.0f); // 去取第2个格的块
+						exp_height_3508 = 50; // 高度200
+					}
+					else if(MerLin_Pack.MerLin[2] == 1)
+					{
+						PurePursuit_SetTarget(&Pure_Handle, 2.759f, 4.15f, 0.0f); // 去取第三个格的块儿
+						exp_height_3508 = 250; // 高度400
+					}
+					exp_flexible_len = 100;
+					over_turn_pos = 1.5;
+					last_count = 2;
+				}
+			}
+
+			if(run_count == 2)
+			{
+				if(last_count != 3)
+				{
+					GPIO_Pin_State_AirPump = 1;
+					GPIO_Pin_State_Valve = 1;
+					exp_flexible_len = 400;
+					vTaskDelay(300);
+					exp_height_3508 = 500;
+					vTaskDelay(300);
+					exp_flexible_len = 40;
+					PurePursuit_SetTarget(&Pure_Handle, 2.56f, 0.605f, 0.0f); // 准备进有斜坡的一边
+					cloud_pos_target = -1.35;
+					vTaskDelay(700);
+					exp_height_3508 = 270;
+					vTaskDelay(700);
+					cloud_pos_target = -1.6;
+					vTaskDelay(200);
+					GPIO_Pin_State_Valve = 0;
+					Two_Three_Sign = 1;
+					vTaskDelay(200);
+					exp_height_3508 = 500;
+					vTaskDelay(500);
+					cloud_pos_target = 0;
+					last_count = 3;
+				}
+			}
+
+			if(run_count == 3)
+			{
+				if(last_count != 4)
+				{
+					Pure_Handle.target_theta = 1.55f;
+					vTaskDelay(1700);
+					Pure_Handle.max_velocity = 0.6f;
+					if(MerLin_Pack.MerLin[3] == 1)
+					{
+						PurePursuit_SetTarget(&Pure_Handle, 5.11f, 0.80f, 1.55f);//吸3
+					}
+					else if(MerLin_Pack.MerLin[6] == 1)
+					{
+						PurePursuit_SetTarget(&Pure_Handle, 6.37f, 0.80f, 1.55f); //吸6
+					}
+					else if(MerLin_Pack.MerLin[9] == 1)
+					{
+						PurePursuit_SetTarget(&Pure_Handle, 7.546f, 0.80f, 1.55f);//吸9
+					}
+					exp_height_3508 = 250;//高度400
+					last_count = 4;
+				}
+			}
+
+			if(run_count == 4)
+			{
+				if (last_count != 5)
+				{
+					if(MerLin_Pack.MerLin[3] == 1)
+					{
+						exp_height_3508 = 50;//吸3
+						vTaskDelay(500);
+						exp_flexible_len = 400;
+						vTaskDelay(300);
+						exp_flexible_len = 100;
+						exp_height_3508 = 540;
+						vTaskDelay(300);
+						over_turn_pos = 2.7;
+						PurePursuit_SetTarget(&Pure_Handle, 8.63f, 0.56f, 1.55f); // 准备上斜坡
+					}
+					else if(MerLin_Pack.MerLin[6] == 1)
+					{
+						exp_height_3508 = 250;//吸6
+						vTaskDelay(500);
+						exp_flexible_len = 400;
+						vTaskDelay(300);
+						exp_flexible_len = 100;
+						exp_height_3508 = 540;
+						vTaskDelay(300);
+						over_turn_pos = 2.7;
+						PurePursuit_SetTarget(&Pure_Handle, 8.63f, 0.56f, 1.55f); // 准备上斜坡
+					}
+					else if(MerLin_Pack.MerLin[9] == 1)
+					{
+						exp_height_3508 = 50;//吸9
+						vTaskDelay(500);
+						exp_flexible_len = 400;
+						vTaskDelay(300);
+						exp_flexible_len = 100;
+						exp_height_3508 = 540;
+						vTaskDelay(300);
+						over_turn_pos = 2.7;
+						PurePursuit_SetTarget(&Pure_Handle, 8.63f, 0.56f, 1.55f); // 准备上斜坡
+					}
+					last_count = 5;
+				}
+			}
+
+			if(run_count == 5)
+			{
+				if (last_count != 6)
+				{
+					Pure_Handle.max_velocity = 1.0f;
+					PurePursuit_SetTarget(&Pure_Handle, 11.3f, 0.85f, 1.55f); //上斜坡
+					last_count = 6;
+					g_mgr.slots[0].in_use = 0;
+					vTaskDelete(NULL);
+				}
+			}
 		}
 
 		if (MerLin_State_flag == 5) // 0,1,2有一个，5，8，11有一个
 		{
+			if(run_count == 1)
+			{
+				if(last_count != 2)
+				{
+					Pure_Handle.max_velocity = 0.4f;
+					Pure_Handle.target_theta = 0.0f;
+					vTaskDelay(1000);
+					if(MerLin_Pack.MerLin[0] == 1)
+					{
+						PurePursuit_SetTarget(&Pure_Handle, 2.765f, 1.722f, 0.0f); // 去取第一个格的块儿
+						exp_height_3508 = 250; // 高度400
+					}
+					else if(MerLin_Pack.MerLin[1] == 1)
+					{
+						PurePursuit_SetTarget(&Pure_Handle, 2.767f, 2.90f, 0.0f); // 去取第2个格的块
+						exp_height_3508 = 50; // 高度200
+					}
+					else if(MerLin_Pack.MerLin[2] == 1)
+					{
+						PurePursuit_SetTarget(&Pure_Handle, 2.759f, 4.15f, 0.0f); // 去取第三个格的块儿
+						exp_height_3508 = 250; // 高度400
+					}
+					exp_flexible_len = 100;
+					over_turn_pos = 1.5;
+					last_count = 2;
+				}
+			}
+
+			if(run_count == 2)
+			{
+				if(last_count != 3)
+				{
+					GPIO_Pin_State_AirPump = 1;
+					GPIO_Pin_State_Valve = 1;
+					exp_flexible_len = 400;
+					vTaskDelay(300);
+					exp_height_3508 = 500;
+					vTaskDelay(300);
+					exp_flexible_len = 40;
+					PurePursuit_SetTarget(&Pure_Handle, 2.56f, 5.35f, 0.0f);//无斜坡
+					cloud_pos_target = -1.35;
+					vTaskDelay(700);
+					exp_height_3508 = 270;
+					vTaskDelay(700);
+					cloud_pos_target = -1.6;
+					vTaskDelay(200);
+					GPIO_Pin_State_Valve = 0;
+					Two_Three_Sign = 1;
+					vTaskDelay(200);
+					exp_height_3508 = 500;
+					vTaskDelay(500);
+					cloud_pos_target = 0;
+					last_count = 3;
+				}
+			}
+
+			if(run_count == 3)
+			{
+				if(last_count != 4)
+				{
+					
+				}
+			}
+
 		}
 
 		if (MerLin_State_flag == 6) // 0,1,2有一个，10有一个
@@ -876,15 +1385,6 @@ void Action(void *param)
 				{
 					ActionManager_Send(&g_mgr, Auto_Rod_Retrieval_Action, NULL);
 					Auto_Rod_Retrieval_Action_Create =1;
-				}
-			}
-			
-			if(Remote_Control.First.Left_Key_Down	 == 1 && Remote_Control.Second.Left_Key_Down == 0)
-			{
-				if(Auto_KFS_Retrieval_Action_Create == 0)
-				{
-					ActionManager_Send(&g_mgr, Auto_KFS_Retrieval_Action, NULL);
-					Auto_KFS_Retrieval_Action_Create = 1;
 				}
 			}
 			
