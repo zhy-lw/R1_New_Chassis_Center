@@ -159,7 +159,7 @@ void Motor_init()
 	Joint.RM3508_motor.ID = 0x202;
 	Joint.RM3508_motor.hcan = &hcan1;//升降
 	
-	vTaskDelay(5000);
+	vTaskDelay(7000);
 	RobStrideInit(&Joint.Rs_motor[0], &hcan2, 0x01, RobStride_EL05);//云台
 	vTaskDelay(100);
 	RobStrideInit(&Joint.Rs_motor[1], &hcan2, 0x04, RobStride_EL05);//翻转
@@ -218,7 +218,7 @@ void Motor_init()
 	Ramp_Value_Servo[2] = 500;
 	Ramp_Value_Servo[3] = 500;
 	expect_len = Initial_Laser_Distance;
-	vTaskDelay(1000);
+	vTaskDelay(2000);
 }
 float exp_scale_3508_t = 0.0f;//升降
 float exp_sclae_Rs_t = 0.0f;//云台
@@ -239,7 +239,8 @@ float Length_To_Scale(float target_len) //
 float Kp_t = 100.0f;
 float Kd_t = 2.0f;
 float yuntai_Ramp = 0.06f;
-
+float fanzhuan_Ramp = 0.03f;
+float exp_over_Rs_t = 0.0f;
 void Arm_Task(void *param)
 {
 	TickType_t Last_wake_time = xTaskGetTickCount();
@@ -251,11 +252,12 @@ void Arm_Task(void *param)
 	{
 		//云台
 		float target_scale_Rs = cloud_pos_target * 3.5f;
-		RampToTarget(&exp_sclae_Rs_t,target_scale_Rs, yuntai_Ramp);
+		RampToTarget(&exp_sclae_Rs_t, target_scale_Rs, yuntai_Ramp);
 		RobStrideMotionControl(&Joint.Rs_motor[0], 0x01, 0, Joint.pos_offset[0] + exp_sclae_Rs_t, 0, Kp_CloudPlatform, Kd_CloudPlatform);
 		
 		//翻转
-		RobStrideMotionControl(&Joint.Rs_motor[1], 0x04, 0, Joint.pos_offset[1] + (over_turn_pos * 2.0f), 0, Kp_t, Kd_t);
+		RampToTarget(&exp_over_Rs_t, over_turn_pos, fanzhuan_Ramp);
+		RobStrideMotionControl(&Joint.Rs_motor[1], 0x04, 0, Joint.pos_offset[1] + (exp_over_Rs_t * 2.0f), 0, Kp_t, Kd_t);
 		
 		HAL_GPIO_WritePin(GPIOB, GPIO_PIN_11, GPIO_Pin_State_AirPump);//气泵
     HAL_GPIO_WritePin(GPIOB, GPIO_PIN_10, GPIO_Pin_State_Valve);//电磁阀
