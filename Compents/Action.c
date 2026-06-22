@@ -2017,7 +2017,236 @@ void Auto_KFS_Action(void *param)
 
 		if (MerLin_State_flag == 9) // 5，8，11有一个，10有一个
 		{
+			if (run_count == 1)
+			{
+				if (last_count != 2)
+				{
+					Pure_Handle.max_velocity = 0.46f;
+					Pure_Handle.target_theta = 0.0f;
+					vTaskDelay(1680);
+					PurePursuit_SetTarget(&Pure_Handle, 2.56f, 5.35f, 0.0f); // 5811区入口点
+					exp_height_3508 = 450.0f;
+					exp_flexible_len = 66.0f;
+					over_turn_pos = 1.5f;
+					vTaskDelay(500);
+					last_count = 2;
+				}
+			}
+			if (run_count == 2)
+			{
+				if (last_count != 3)
+				{
+					Pure_Handle.target_theta = -1.55f; // 旋转准备进入5811区
+					vTaskDelay(2888);
+					PurePursuit_SetTarget(&Pure_Handle, 2.56f, 5.35f, -1.55f);
 
+					last_count = 3;
+				}
+			}
+			/**First:取块[5]**/
+			if (MerLin_Pack.MerLin[5] == 1)
+			{
+				if (run_count == 3)
+				{
+					if (last_count != 4)
+					{
+						last_count = 4;
+					}
+				}
+			}
+			/**First取块[8]**/
+			else if (MerLin_Pack.MerLin[8] == 1)
+			{
+
+				if (run_count == 3) // 到达1.1
+				{
+					if (last_count != 4)
+					{
+						Pure_Handle.max_velocity = 0.76f;
+						PurePursuit_SetTarget(&Pure_Handle, 6.145f, 5.35f, -1.55f);
+
+						last_count = 4;
+					}
+				}
+				if (run_count == 4) // 到达1.2
+				{
+					if (last_count != 5)
+					{
+						PurePursuit_SetTarget(&Pure_Handle, 6.145f, 5.26f, -1.55f);
+						GPIO_Pin_State_AirPump = 1;
+						GPIO_Pin_State_Valve = 1;
+
+						last_count = 5;
+					}
+				}
+
+				if (run_count == 5) // 吸+存+准备Second1.1
+				{
+					if (last_count != 6)
+					{
+						exp_height_3508 = 250.0f;
+						vTaskDelay(300);
+						exp_flexible_len = 400.0f;
+						vTaskDelay(200);
+						PurePursuit_SetTarget(&Pure_Handle, 6.145f, 5.47f, -1.55f);
+						exp_height_3508 = 540.0f;
+						vTaskDelay(300);
+						exp_flexible_len = 40.0f;
+						last_count = 6;
+					}
+				}
+				if (run_count == 6) // 吸+存+准备Second1.2
+				{
+					if (last_count != 7)
+					{
+						PurePursuit_SetTarget(&Pure_Handle, 8.63f, 5.47f, -1.55f); // 左上角旋转处
+						cloud_pos_target = -1.35f;
+						vTaskDelay(700);
+						exp_height_3508 = 270.0f;
+						vTaskDelay(700);
+						cloud_pos_target = -1.6;
+						vTaskDelay(200);
+						GPIO_Pin_State_Valve = 0;
+						Two_Three_Sign = 1;
+						vTaskDelay(200);
+						exp_height_3508 = 500;
+						vTaskDelay(500);
+						cloud_pos_target = 0;
+						last_count = 7;
+					}
+				}
+			}
+			/**First取块[11]**/
+			else if (MerLin_Pack.MerLin[11] == 1)
+			{
+				if (run_count == 3) // 到达
+				{
+					if (last_count != 4)
+					{
+						Pure_Handle.max_velocity = 0.6f;
+						PurePursuit_SetTarget(&Pure_Handle, 7.352f, 5.35f, -1.55f); // 到达
+						GPIO_Pin_State_AirPump = 1;
+						GPIO_Pin_State_Valve = 1;
+						last_count = 4;
+					}
+				}
+				if (run_count == 4) // 到达
+				{
+					if (last_count != 5)
+					{
+						Pure_Handle.max_velocity = 0.6f;
+						PurePursuit_SetTarget(&Pure_Handle, 7.352f, 5.247f, -1.55f); // 到达
+						GPIO_Pin_State_AirPump = 1;
+						GPIO_Pin_State_Valve = 1;
+						last_count = 5;
+					}
+				}
+				if (run_count == 5) // 吸+存+准备Second
+				{
+					if (last_count != 6)
+					{
+						exp_height_3508 = 250.0f;
+						vTaskDelay(300);
+						exp_flexible_len = 88.0f;
+						vTaskDelay(200);
+						exp_height_3508 = 540.0f;
+						vTaskDelay(300);
+						exp_flexible_len = 40.0f;
+						PurePursuit_SetTarget(&Pure_Handle, 8.653f, 5.47f, -1.55f); // 左上角旋转处1.1
+						cloud_pos_target = -1.35f;
+						vTaskDelay(700);
+						exp_height_3508 = 270.0f;
+						vTaskDelay(700);
+						cloud_pos_target = -1.6f;
+						vTaskDelay(200);
+						GPIO_Pin_State_Valve = 0;
+						Two_Three_Sign = 1;
+						vTaskDelay(200);
+						exp_height_3508 = 500.0f;
+						vTaskDelay(500);
+						cloud_pos_target = 0;
+						last_count = 6;
+					}
+				}
+			}
+			/**左上角旋转区**/
+			if (run_count == 7)
+			{
+				if (last_count != 8)
+				{
+					Pure_Handle.max_velocity = 0.45f;
+					Pure_Handle.target_theta = -3.1f;
+					vTaskDelay(700);
+					PurePursuit_SetTarget(&Pure_Handle, 8.653f, 5.47f, -3.1f); // 左上角旋转处1.2
+					last_count = 8;
+				}
+			}
+			/**Second:取块[10]**/
+
+			if (run_count == 8)
+			{
+				if (last_count != 9)
+				{
+					Pure_Handle.max_velocity = 0.66f;
+					exp_height_3508 = 250.0f;
+					PurePursuit_SetTarget(&Pure_Handle, 8.653f, 3.138f, -3.1f);
+					last_count = 9;
+				}
+			}
+			if (run_count == 9)
+			{
+				if (last_count != 10)
+				{
+					Pure_Handle.max_velocity = 0.66f;
+					exp_height_3508 = 250.0f;
+					PurePursuit_SetTarget(&Pure_Handle, 8.455f, 3.138f, -3.1f);
+					GPIO_Pin_State_Valve = 1;
+					last_count = 10;
+				}
+			}
+			if (run_count == 10)
+			{
+				if (last_count != 11)
+				{
+					exp_flexible_len = 400.0f;
+					vTaskDelay(300);
+					exp_height_3508 = 500.0f;
+					PurePursuit_SetTarget(&Pure_Handle, 8.653f, 3.138f, -3.1f);
+					last_count = 11;
+				}
+			}
+			if (run_count == 11)
+			{
+				if (last_count != 12)
+				{
+					PurePursuit_SetTarget(&Pure_Handle, 8.635f, 0.596f, -3.1f); // 斜坡前旋转区1.1
+					exp_flexible_len = 58.0f;
+					over_turn_pos = 2.7f;
+					last_count = 12;
+				}
+			}
+			if (run_count == 12)
+			{
+				if (last_count != 13)
+				{
+					Pure_Handle.max_velocity = 0.45f;
+					Pure_Handle.target_theta = 1.55f;
+					vTaskDelay(700);
+					PurePursuit_SetTarget(&Pure_Handle, 8.635f, 0.586f, 1.55f); // 斜坡前旋转区1.2
+					last_count = 13;
+				}
+			}
+			if (run_count == 13)
+			{
+				if (last_count != 14)
+				{
+					Pure_Handle.max_velocity = 0.88f;
+					PurePursuit_SetTarget(&Pure_Handle, 11.3f, 0.85f, 1.55f); // 上斜坡
+					last_count = 14;
+					g_mgr.slots[0].in_use = 0;
+					vTaskDelete(NULL);
+				}
+			}
 		}
 		vTaskDelayUntil(&last_wake_time, pdMS_TO_TICKS(10));
 	}
