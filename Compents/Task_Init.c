@@ -37,7 +37,6 @@ volatile  float Kp_CloudPlatform = 0.0f;
 volatile float Kd_CloudPlatform = 0.0f;
 
 int16_t can1_3508_Tx_Data[4]={0};//3508
-uint8_t Joint_Enabled = 1;//使能
 
 //气泵
 GPIO_PinState GPIO_Pin_State_AirPump = 0;
@@ -119,19 +118,18 @@ void Task_Init(void)
 		__HAL_UART_ENABLE_IT(&huart3, UART_IT_IDLE);
 		HAL_UART_Receive_DMA(&huart3, usart3_dma_buff, sizeof(usart3_dma_buff));
 	
-    wheelArray[0].pos.x =  0.305f;
-    wheelArray[0].pos.y =  0.280f; 
+		wheelArray[0].pos.x =  0.315f;
+    wheelArray[0].pos.y =  0.325f; 
     wheelArray[0].pos.z =  PI / 4.0f;
-    wheelArray[1].pos.x =  0.305f;
+    wheelArray[1].pos.x =  0.315f;
     wheelArray[1].pos.y =  -0.325f;
     wheelArray[1].pos.z =  PI / 4.0f;
-    wheelArray[2].pos.x =  -0.325f;
+    wheelArray[2].pos.x =  -0.315f;
     wheelArray[2].pos.y =  -0.325f;
     wheelArray[2].pos.z =  PI / 4.0f;
-    wheelArray[3].pos.x =  -0.325f;
-    wheelArray[3].pos.y =  0.280f;
-    wheelArray[3].pos.z =  PI / 4.0f;
-		
+    wheelArray[3].pos.x =  -0.315f;
+    wheelArray[3].pos.y =  0.325f;
+    wheelArray[3].pos.z =  PI / 4.0f;		
     for(int i = 0; i < 4; i++)
     {
         wheelArray[i].user_data = &steeringWheelArray[i];
@@ -164,7 +162,7 @@ void Motor_init()
 	vTaskDelay(100);
 	RobStrideInit(&Joint.Rs_motor[1], &hcan2, 0x04, RobStride_EL05);//翻转
 	vTaskDelay(100);
-	RobStrideInit(&Joint.Rs_motor[2], &hcan1, 0x03, RobStride_EL05);//伸缩
+	RobStrideInit(&Joint.Rs_motor[2], &hcan2, 0x03, RobStride_EL05);//伸缩
 	vTaskDelay(100);
 	RobStrideDisable(&Joint.Rs_motor[0], 1);  // clear_error=1
 	vTaskDelay(100);
@@ -195,18 +193,6 @@ void Motor_init()
 	Joint.RM3508_motor.vel_pid.Kd = 0.0f;
 	Joint.RM3508_motor.vel_pid.limit = 10000.0f;
 	Joint.RM3508_motor.vel_pid.output_limit = 16384.0f;//升降
-	
-	Joint.Rs_pos_pid[0].Kp = 6.0f;
-	Joint.Rs_pos_pid[0].Ki = 0.0f;
-	Joint.Rs_pos_pid[0].Kd = 0.0f;
-	Joint.Rs_pos_pid[0].limit = 10.0f;
-	Joint.Rs_pos_pid[0].output_limit = 50.0f;
-	
-	Joint.Rs_vel_pid[0].Kp = 1.5f;
-	Joint.Rs_vel_pid[0].Ki = 0.05f;
-	Joint.Rs_vel_pid[0].Kd = 0.0f;
-	Joint.Rs_vel_pid[0].limit = 1000.0f;
-	Joint.Rs_vel_pid[0].output_limit = 6.0f;//云台
 	
 	Kp_flexible = 100.0f;
 	Kd_flexible = 2.0f;
@@ -245,9 +231,10 @@ void Arm_Task(void *param)
 {
 	TickType_t Last_wake_time = xTaskGetTickCount();
 	
-	Joint.pos_offset[0] = 3.3859f;
-	Joint.pos_offset[1] = 5.16852283f;
-	Joint.pos_offset[2] = 2.9348f;
+	Joint.pos_offset[0] = 5.26976824f;
+	Joint.pos_offset[1] = 5.44733238f;
+	Joint.pos_offset[2] = 2.96297431f;
+	
 	for (;;)
 	{
 		//云台
@@ -421,7 +408,7 @@ void Auto_Navigatoin(void *para)
 	PurePursuit_Init(&Pure_Handle);
 	Pure_Handle.target_x = 1.0f;
 	Pure_Handle.target_y = 2.65f;
-	Pure_Handle.target_theta = 0.0f;
+	Pure_Handle.target_theta = 3.14f;
 	
 	One_Four_PID.Kp = 0.0015f;
 	One_Four_PID.Ki = 0.000012f;
@@ -435,11 +422,11 @@ void Auto_Navigatoin(void *para)
 	Two_Three_PID.limit = 10.0f;
 	Two_Three_PID.output_limit = 0.7f;
 	
-	PID_Theta.Kp = 1.1f;
+	PID_Theta.Kp = 1.3f;
 	PID_Theta.Ki = 0.0f;
-	PID_Theta.Kd = 3.5f;
+	PID_Theta.Kd = 3.0f;
 	PID_Theta.limit = 1000.0f;
-	PID_Theta.output_limit = 2.0f;
+	PID_Theta.output_limit = 3.5f;
 	
 	while(1)
 	{
@@ -629,7 +616,13 @@ void HAL_CAN_RxFifo0MsgPendingCallback(CAN_HandleTypeDef *hcan)
 	uint8_t Recv[8];
 	uint32_t ID = CAN_Receive_DataFrame(&hcan1, Recv);
 	Motor3508Recv(&Joint.RM3508_motor,hcan, ID, Recv);
-	RobStrideRecv_Handle(&Joint.Rs_motor[2], hcan, ID, Recv);
+	if (hcan->Instance == CAN1)
+  {
+    if (ID == 0x610)
+    {
+      CAN_Laser_ReceiveHandler(&DT_35_Len, Recv);
+    }
+  }
 }
 
 void HAL_CAN_RxFifo1MsgPendingCallback(CAN_HandleTypeDef *hcan)
@@ -638,13 +631,7 @@ void HAL_CAN_RxFifo1MsgPendingCallback(CAN_HandleTypeDef *hcan)
 	uint32_t ID = CAN_Receive_DataFrame(hcan, Recv);
 	RobStrideRecv_Handle(&Joint.Rs_motor[0], hcan, ID, Recv);
 	RobStrideRecv_Handle(&Joint.Rs_motor[1], hcan, ID, Recv);
-	if (hcan->Instance == CAN2)
-  {
-    if (ID == 0x610)
-    {
-      CAN_Laser_ReceiveHandler(&DT_35_Len, Recv);
-    }
-  }
+	RobStrideRecv_Handle(&Joint.Rs_motor[2], hcan, ID, Recv);
 }
 
 //斜坡
